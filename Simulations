@@ -1,0 +1,1079 @@
+# 仿真器及其使用
+
+----
+
+
+
+## 1.基于开源平台的方案
+
+### 1.1HoloOcean
+
+> [基于UE4开发的水下仿真环境。](https://byu-holoocean.github.io/holoocean-docs/UE5.3_Prerelease/index.html)
+
+[RL_AUV_tracking](https://github.com/Ice-mao/RL_AUV_tracking)储存库在此环境下用强化学习进行水下目标跟踪。
+
+#### 1.1.1 基本使用
+
+##### A. 安装
+
+安装holoocean建议使用虚拟环境安装python3.10版本，并且安装以下包：
+
+📦 搭配组合一览
+
+| 库            | 推荐版本 |
+| ------------- | -------- |
+| numpy         | 1.22.4   |
+| scipy         | 1.8.1    |
+| opencv-python | 4.5.5.64 |
+| matplotlib    | 3.5.2    |
+| holoocean     | 1.0.0    |
+
+​	之后关联Github账户与Unreal，否则无法访问holoocean储存库。具体步骤可以参考[官方链接](https://byu-holoocean.github.io/holoocean-docs/UE5.3_Prerelease/usage/installation.html)。
+
+​	注意下载ocean环境时，速度极慢，容易失败，需要自行下载然后安装。步骤如下：
+
+:one:使用Aria2c多线程下载：
+
+```
+aria2c -x 16 -s 16 -d /home/airporal/.local/share/holoocean/1.0.0/worlds/Ocean https://robots.et.byu.edu/holo/Ocean/v1.0.0/Linux.zip
+```
+
+:two:修改holoocean包对应的下载函数，将url改为本地安装：
+
+找到python环境中安装的holoocean库，打开packagemanager.py文件：
+
+```bash
+cd /home/airporal/miniconda3/envs/holoocean/lib/python3.10/site-packages/holoocean
+
+```
+
+修改install函数：
+
+```python
+# 将url更改为自行下载的ocean压缩包路径，注释原url
+url = "/home/airporal/.local/share/holoocean/1.0.0/worlds/Ocean/Linux.zip"
+'''url = "{backend_url}{package_name}/{branch}/{platform}.zip".format(
+                    backend_url=BACKEND_URL,
+                    branch=branch,
+                    package_name=package_name,
+                    platform=commit)sf'''
+```
+
+修改 _download_binary函数：
+
+```python
+def _download_binary2(zip_path, install_location, block_size=1000000):
+    def file_reader_worker(zip_path, queue, file_size):
+        with open(zip_path, 'rb') as f:
+            amount_read = 0
+            max_width = 20
+            percent_per_block = 100 // max_width
+
+            while True:
+                chunk = f.read(block_size)
+                if not chunk:
+                    break
+                queue.append(chunk)
+                amount_read += len(chunk)
+
+                percent_done = 100 * amount_read / file_size
+                int_percent = int(percent_done)
+                num_blocks = int_percent // percent_per_block
+                blocks = chr(0x2588) * num_blocks
+                spaces = " " * (max_width - num_blocks)
+                try:
+                    sys.stdout.write("\r|" + blocks + spaces + "| %d%%" % int_percent)
+                except UnicodeEncodeError:
+                    print("\r" + str(int_percent) + "%", end="")
+
+                sys.stdout.flush()
+
+    if not os.path.exists(zip_path):
+        print("Zip file not found:", zip_path)
+        return
+
+    file_size = os.path.getsize(zip_path)
+    print("File size:", file_size, "bytes")
+
+    # 用列表模拟队列收集数据，只用于显示进度，不用于写入
+    queue = []
+    file_reader_worker(zip_path, queue, file_size)
+    print()
+
+    # 解压文件
+    print("Unpacking...")
+    with zipfile.ZipFile(zip_path, 'r') as zip_file:
+        zip_file.extractall(install_location)
+
+    # 若是类 Unix 系统，尝试添加可执行权限
+    if os.name == "posix":
+        print("Fixing Permissions")
+        _make_excecutable(install_location)
+
+    print("Finished.")
+    
+```
+
+改为从本地安装并添加权限即可。
+
+测试：
+
+```python
+import holoocean
+from holoocean import packagemanager
+
+# 查看安装的包：
+packagemanager.installed_packages()
+# 显示安装的包信息
+packagemanager.package_info("Ocean")
+# 特定场景信息
+packagemanager.world_info("SimpleUnderwater")
+packagemanager.scenario_info("Rooms-DataGen")
+```
+
+##### B. 建立环境交互
+
++ 打开环境、执行仿真动作
+
+    ```python
+    env = holoocean.make("Dam-HoveringCamera")
+    env.act('auv0', command)
+    state = env.tick()
+    # 使用以下函数等价于act和tick一次
+    env.step()
+    ```
+
+    act仅仅向agent发送指令，并不会使得其运动，执行tick后方可运动。调用act后每次调用tick都会向agent发送相同的指令.
+
+​	场景是以.json格式设置的通过ue实现的世界,世界本身被改变,但可以对世界中的对象进行设置.场景以{World_name}-{ScenaioName}.json命名.
+
+​	**也可以通过 should_render_viewport()方法禁用交互环境。在训练时可能不需要可视化渲染以提高仿真速度。**
+
+​	场景可以通过json文件加载(放入指定路径下),也可以通过python进行设置.
+
+```python
+{
+   "name": "{Scenario Name}",
+   "world": "{world it is associated with}",
+   "lcm_provider": "{Optional, where to publish lcm to}",
+   "ticks_per_sec": 30,
+   "frames_per_sec": 30,
+   "env_min": [-10, -10, -10],
+   "env_max": [10, 10, 10],
+   "octree_min": 0.1,
+   "octree_max": 5,
+   "agents":[
+       {
+    "agent_name": "auv0",
+    "agent_type": "HoveringAUV",
+    "sensors": [
+        {
+           "sensor_type": "RGBCamera", #必要参数
+           "sensor_name": "FrontCamera",
+           "location": [1.0, 2.0, 3.0],
+           "rotation": [1.0, 2.0, 3.0],
+           "socket": "socket name or \"\"",
+           "Hz": 5,
+           "lcm_channel": "channel_name",
+           "configuration": {
+				传感器参数设置
+           }
+    ],
+    "control_scheme": 1, # this is the custom dynamics control scheme
+    "location": [0,0,-10],
+    "rotation": [20,20,90]
+}
+      "array of agent objects"
+       
+   ],
+   "weather": {
+      "hour": 12,
+      "type": "'sunny' or 'cloudy' or 'rain'",
+      "fog_density": 0,
+      "day_cycle_length": 86400
+   },
+   "window_width":  1280,
+   "window_height": 720
+}
+```
+
+##### C. 多个代理
+
+Agent主要有控制模式、[各个传感器安装位置sockets需要了解](https://byu-holoocean.github.io/holoocean-docs/UE5.3_Prerelease/agents/agents.html)。
+
+Agent Types:
+
+​        "SphereAgent": SphereAgent,
+
+​        "UavAgent": UavAgent,
+
+​        "NavAgent": NavAgent,
+
+​        "AndroidAgent": AndroidAgent,
+
+​        "HandAgent": HandAgent,
+
+​        "TurtleAgent": TurtleAgent,
+
+​        "HoveringAUV": HoveringAUV,
+
+​        "TorpedoAUV": TorpedoAUV,
+
+​        "SurfaceVessel": SurfaceVessel,
+
+```python
+import holoocean
+import numpy as np
+from rich.console import Console
+from rich.table import Table
+import time
+console = Console()
+def print_robot_state(step, imu, vel):
+    table = Table(title=f"🤖 Robot State - Step {step}")
+
+    table.add_column("Property", style="cyan", no_wrap=True)
+    table.add_column("Value", style="magenta")
+
+    table.add_row("Position", str(imu))
+    table.add_row("Orientation", str(vel))
+
+    console.clear()
+    console.print(table)
+    
+
+cfg = {
+    "name": "test_rgb_camera",
+    "world": "SimpleUnderwater",
+    "package_name": "Ocean",
+    "main_agent": "auv0",
+    "ticks_per_sec": 60,
+    "agents": [
+        {
+            "agent_name": "auv0",
+            "agent_type": "TorpedoAUV",
+            "sensors": [
+                {
+                    "sensor_type": "IMUSensor"
+                }
+            ],
+            "control_scheme": 0,
+            "location": [0, 0, -5]
+        },
+        {
+            "agent_name": "auv1",
+            "agent_type": "HoveringAUV",
+            "sensors": [
+                {
+                    "sensor_type": "DVLSensor"
+                }
+            ],
+            "control_scheme": 0,
+            "location": [0, 2, -5]
+        }
+    ]
+}
+
+env = holoocean.make(scenario_cfg=cfg)
+env.reset()
+
+env.act('auv0', np.array([0,0,0,0,75]))
+env.act('auv1', np.array([0,0,0,0,20,20,20,20]))
+for i in range(300):
+    states = env.tick()
+
+    # states is a dictionary
+    imu = states["auv0"]["IMUSensor"]
+
+    vel = states["auv1"]["DVLSensor"]
+    
+    print_robot_state(i, imu, vel)
+```
+
+可在agens.py文件中查看各个agent的定义数据.仿真时,按tab键可以切换代理.
+
+多个代理之间可以通过光学或声学方法[相互通信.](https://byu-holoocean.github.io/holoocean-docs/UE5.3_Prerelease/usage/examples/multi-coms.html#)
+
++ 获取传感器数据
+
+可以使用opencv库来处理图像数据。
+
+```python
+import holoocean, cv2
+import numpy as np
+import time
+from pynput import keyboard
+
+env = holoocean.make("Dam-HoveringCamera")
+command = np.random.randint(0,10,(8,))
+# env.act('auv0', [10,10,10,10,0,0,0,0])
+begin = time.time()
+for _ in range(2000):
+    now = time.time()
+    # state = env.tick()
+    command = np.random.randint(0,10,(8,))
+    env.act('auv0', command)
+    state = env.tick()
+    print(command,'\t',time.time()-now)
+    if "LeftCamera" in state:
+        pixels = state["LeftCamera"]
+        cv2.namedWindow("Camera Output")
+        cv2.imshow("Camera Output", pixels[:, :, 0:3])
+        if cv2.waitKey(30) & 0xFF == ord('q'):
+            break
+    else:
+        print("No LeftCamera in state")
+        time.sleep(0.1)
+
+
+cv2.destroyAllWindows()
+```
+
++ 键盘控制
+
+可使用pynput库监听键盘操作，来控制agent运动。
+
+```python
+import holoocean, cv2
+import numpy as np
+import time
+from pynput import keyboard
+
+pressed_keys = list()
+force = 25
+
+def on_press(key):
+    global pressed_keys
+    if hasattr(key, 'char'):
+        pressed_keys.append(key.char)
+        # 使用集合的互异性去重
+        pressed_keys = list(set(pressed_keys))
+        
+def on_release(key):
+    global pressed_keys
+    if hasattr(key, 'char'):
+        pressed_keys.remove(key.char)
+
+listener = keyboard.Listener(
+    on_press=on_press,
+    on_release=on_release)
+listener.start()
+
+def parse_keys(keys, val):
+    # 与动力学相关！！
+    command = np.zeros(8)
+    if 'i' in keys:
+        command[0:4] += val
+    if 'k' in keys:
+        command[0:4] -= val
+    if 'j' in keys:
+        command[[4,7]] += val
+        command[[5,6]] -= val
+    if 'l' in keys:
+        command[[4,7]] -= val
+        command[[5,6]] += val
+
+    if 'w' in keys:
+        command[4:8] += val
+    if 's' in keys:
+        command[4:8] -= val
+    if 'a' in keys:
+        command[[4,6]] += val
+        command[[5,7]] -= val
+    if 'd' in keys:
+        command[[4,6]] -= val
+        command[[5,7]] += val
+
+    return command
+with holoocean.make("Dam-HoveringCamera") as env:
+    begin = time.time()
+    while True:
+        now = time.time()
+        if 'q' in pressed_keys:
+            break
+        command = parse_keys(pressed_keys, force)
+        print(command,'\t',time.time()-now)
+        #send to holoocean
+        env.act("auv0", command)
+        state = env.tick()
+        
+        if "LeftCamera" in state:
+            pixels = state["LeftCamera"]
+            cv2.namedWindow("Camera Output")
+            cv2.imshow("Camera Output", pixels[:, :, 0:3])
+        if cv2.waitKey(30) & 0xFF == ord('q'):
+            break
+        else:
+            print("No LeftCamera in state")
+            # time.sleep(0.1)
+    cv2.destroyAllWindows()
+```
+
++ 动力学设置
+
+> 向环境中执行动作会获得反馈的状态,可以自己根据状态信息设置动力学模型来控制下一步输入指令.
+
+```python
+import numpy as np
+import holoocean
+from holoocean.agents import HoveringAUV
+from scipy.spatial.transform import Rotation
+
+scenario = {
+    "name": "hovering_dynamics",
+    "package_name": "Ocean",
+    "world": "SimpleUnderwater",
+    "main_agent": "auv0",
+    "agents": [
+        {
+            "agent_name": "auv0",
+            "agent_type": "HoveringAUV",
+            "sensors": [
+                {
+                    "sensor_type": "DynamicsSensor",
+                    "configuration":{
+                        "UseRPY": False # Use quaternion
+                    }
+                },
+            ],
+            "control_scheme": 1, # this is the custom dynamics control scheme
+            "location": [0,0,-10],
+            "rotation": [20,20,90]
+        }
+    ]
+}
+
+g = 9.81 # gravity
+b = 3 # linear damping
+c = 2 # angular damping
+# HoveringAUV.mass += 1 # alternatively make it sink
+
+def f(x):
+    # Extract all info from state
+    a = x[:3]  # 加速度
+    v = x[3:6] # 速度
+    p = x[6:9] # 位置
+    alpha = x[9:12] # 角加速度
+    omega = x[12:15] # 角速度
+    quat = x[15:19] # 四元数表示的姿态
+    R = Rotation.from_quat(quat).as_matrix()
+
+    # 计算推进器输出的力,首先是抵抗静力,其次是通过PD控制器,计算推进器的力
+    force = np.zeros(3)
+    force[2] += -HoveringAUV.mass * g # gravity
+    force[2] += HoveringAUV.water_density * g * HoveringAUV.volume # buoyancy
+    force -= v*b # Damping
+
+    # Sum all torques
+    torque = np.zeros(3)
+    buoy_force = HoveringAUV.water_density*g*HoveringAUV.volume*np.array([0,0,1]) # 浮力 in global frame
+    cob = R@HoveringAUV.cob # 旋转后的浮心,旋转矩阵与浮心向量积
+    torque += np.cross(cob, buoy_force) # torque from buoyancy,浮心和浮力的叉积,得到相对于原点的力矩
+    torque -= omega*c # damping
+
+    # Convert force & torque to accelerations
+    lin_accel = force / HoveringAUV.mass   
+    ang_accel = np.linalg.inv(HoveringAUV.I)@torque # 旋转矩阵的逆矩阵与力矩的叉积得到角加速度
+
+    return np.append(lin_accel, ang_accel)
+
+accels = np.zeros(6)
+# Make environment
+with holoocean.make(scenario_cfg=scenario) as env:
+    for i in range(500):
+        # Step simulation
+        state = env.step(accels)
+        # Get accelerations to pass to HoloOcean
+        print(state["DynamicsSensor"])
+        accels = f(state["DynamicsSensor"])
+```
+
+##### D. PD控制器
+
+查看agent定义文件中的设置.一般设置多种控制模式,使用control_scheme参数来选择指定的控制模式.
+
+可以给agent设置control_scheme=1来使用PD控制模式,通过向env发送位置也可以控制agent向目标运动.
+
+一般0代表推进器控制，1代表推力的PD控制，2代表自定义控制器，需要自己设置，将禁用所有除碰撞外的力。
+
+```python
+import holoocean
+import numpy as np
+import utils
+import time
+config = {
+    "name": "SurfaceNavigator",
+    "world": "SimpleUnderwater",
+    "package_name": "Ocean",
+    "main_agent": "hroerone",
+    "agents":[
+        {
+            "agent_name": "hroerone",
+            "agent_type": "SurfaceVessel",
+            "sensors": [
+            {
+                "sensor_type": "GPSSensor"
+                # "sensor_type": "IMUSensor"
+            }
+            ],
+            "control_scheme": 1, # PD Control Scheme
+            "location": [0,0,2],
+            "rotation": [0, 0, 0]
+        }
+    ],
+}
+
+# Define waypoints
+idx = 0
+locations = np.array([[25,25],
+                    [-25,25],
+                    [-25,-25],
+                    [25,-25]])
+
+# Start simulation
+with holoocean.make(scenario_cfg=config) as env:
+    # Draw waypoints
+    for l in locations:
+        env.draw_point([l[0], l[1], 0], lifetime=0)
+
+    # print("Going to waypoint ", idx)
+    console = utils.init_consol()
+    all_data,data = [[],[],[]],[[],[],[]]
+    # all_data,data = [[]*3],[]
+    frame_count=0
+    start_time = time.time()
+    while True:
+        try:
+            frame_count+=1
+            #send waypoint to holoocean
+            state = env.step(locations[idx])
+            # Check if we're close to the waypoint
+            p = state["GPSSensor"][0:2]
+            if np.linalg.norm(p-locations[idx]) < 1e-1:
+                idx = (idx+1) % 4
+                print("Going to waypoint ", idx)
+            # data = utils.print_robot_state_live(console,data,val=state["GPSSensor"][0:3],name=["x", "y","z"],frame_count=frame_count,start_time=start_time)
+            utils.print_robot_state(console,frame_count,state["GPSSensor"])
+            for i in range(len(state["GPSSensor"][0:3])):
+                all_data[i].append(state["GPSSensor"][i])
+        except KeyboardInterrupt:
+            print("Exiting...")
+            break
+    utils.save_data_to_excel(all_data, names=["x", "y","z"])
+```
+
+##### E. 声纳
+
++ 成像声纳
+
++ 剖析声纳
+
++ 侧扫声纳
+
++ 单波束声纳
+
+##### F. 快捷键
+
+在仿真界面可以使用以下快捷键：
+
+| 钥匙            | 行动         | 描述                                                         |
+| --------------- | ------------ | ------------------------------------------------------------ |
+| `c`             | 切换相机模式 | 在追逐摄像机和透视摄像机之间切换，显示代理的摄像机传感器所看到的内容。 |
+| `v`             | 切换观众模式 | 切换观众模式，让您可以自由地环游世界。                       |
+| `w` `a` `s` `d` | 移动相机     | 在观众/自由摄像机模式下移动视口摄像机。                      |
+| `q` `ctrl`      | 下降         | 对于观众/自由镜头模式                                        |
+| `e` `space`     | 上升         | 对于观众/自由镜头模式                                        |
+| `shift`         | 涡轮         | 在观众/自由视角时移动得更快                                  |
+| `tab`           | 循环切换代理 | 当不处于观众/自由摄像机模式时，循环浏览世界上的代理          |
+| `h`             | 切换HUD      | HUD 显示视口所跟随的代理的名称和位置，或者如果视口分离（旁观者模式），则显示摄像机的位置请注意，这将干扰 ViewportCapture 传感器 |
+
+---
+
+##### G. headless
+
+> 使用should_render_viewport()方法是在调用环境后手动设置不进行窗口渲染，主窗口不变化，但传感器显示的界面仍然存在且更新，而无头模式将自动禁用窗口渲染，即不打开主窗口；
+
+```python
+import holoocean
+import matplotlib.pyplot as plt
+import numpy as np
+import utils
+#### GET SONAR CONFIG
+scenario = "OpenWater-TorpedoSinglebeamSonar"
+config = holoocean.packagemanager.get_scenario(scenario)
+config = config['agents'][0]['sensors'][-1]["configuration"]
+minR = config['RangeMin']
+maxR = config['RangeMax']
+binsR = config['RangeBins']
+
+#### GET PLOT READY
+plt.ion()
+
+t = np.arange(0,50)
+r = np.linspace(minR, maxR, binsR)
+T, R = np.meshgrid(t, r)
+data2 = np.zeros_like(R)
+
+plt.grid(False)
+plot = plt.pcolormesh(T, R, data2, cmap='gray', shading='auto', vmin=0, vmax=1)
+plt.tight_layout()
+plt.gca().invert_yaxis()
+plt.gcf().canvas.flush_events()
+
+#### RUN SIMULATION
+command = np.array([0,0,0,0,20])
+data = []
+with holoocean.make(scenario,show_viewport=False) as env:
+    for i in range(1000):
+        env.act("auv0", command)
+        env.should_render_viewport(True)
+        state = env.tick()
+        if i==0:
+            data = [[] for n in state["VelocitySensor"]]
+            # data=np.zeros_like(state["VelocitySensor"])
+            print(data)
+        console = utils.init_consol()
+        
+        print(state["VelocitySensor"])
+        utils.print_robot_state_live(console,data,val=state["VelocitySensor"],name=["x","y","z"])
+        if 'SinglebeamSonar' in state:
+            data2 = np.roll(data2, 1, axis=1)
+            data2[:,0] = state['SinglebeamSonar']
+
+            plot.set_array(data2.ravel())
+
+            plt.draw()
+            plt.gcf().canvas.flush_events()
+        
+
+print("Finished Simulation!")
+plt.ioff()
+plt.show()
+```
+
+当使用ssh远程控制时，自动进入headless模式。
+
+#### 1.1.2  场景列表
+
++ Dam
+
+![image-20250421111407931](assets/image-20250421111407931.png)
+
++ OpenWater
+
+![image-20250421111528327](assets/image-20250421111528327.png)
+
++ PierHarbor
+
+![image-20250421111648934](assets/image-20250421111648934.png)
+
++ SimpleUnderWater
+
+![image-20250421111808429](assets/image-20250421111808429.png)
+
+每个场景下包含一些额外定义的场景，如agent类型、传感器类型等。
+
+#### 1.1.3 使用虚幻引擎进行开发
+
+:one:开发前准备
+
+​	建议在windows下进行开发，安装UE5.3、Visual Studio 2022、git 、python。
+
+​	克隆holoocean仓库，并切换到develop分支，再安装python包，可以在engine目录下找到ue的uproject文件。双击后点击立即重建以打开虚幻引擎。
+
+```python
+git checkout develop
+pip install -e client/
+```
+
+​	![image-20250522205542520](assets/image-20250522205542520.png)
+
+​	在虚幻编辑器中，点击平台->窗口->烘焙内容。
+
++ 创建Agent
+
+​	首先需要复制以下的TurtleAgent作为基本模板：
+
+```python
+class TurtleAgent(HoloOceanAgent):
+    """A simple turtle bot.
+
+    **Action Space**:
+
+    ``[forward_force, rot_force]``
+    
+    - ``forward_force`` is capped at 160 in either direction
+    - ``rot_force`` is capped at 35 either direction
+
+    Inherits from :class:`HoloOceanAgent`."""
+    # constants in TurtleAgent.h in holoocean-engine
+    __MAX_THRUST = 160.0
+    __MIN_THRUST = -__MAX_THRUST
+
+    __MAX_YAW = 35.0
+    __MIN_YAW = -__MAX_YAW
+
+    agent_type = "TurtleAgent"
+
+    @property
+    def control_schemes(self):
+        low = [self.__MIN_THRUST, self.__MIN_YAW]
+        high = [self.__MAX_THRUST, self.__MAX_YAW]
+        return [("[forward_force, rot_force]", ContinuousActionSpace([2], low=low, high=high))]
+
+    def get_joint_constraints(self, joint_name):
+        return None
+
+    def __repr__(self):
+        return "TurtleAgent " + self.name
+
+    def __act__(self, action):
+        np.copyto(self._action_buffer, np.array(action))
+        np.copyto(self._action_buffer, action)
+```
+
+​	并在AgentDefinition类中声明。此时已完成Python中的任务。
+
+#### 1.1.4 Holoocean强化学习
+
+> 利用Holoocean提供的环境与代理实现强化学习
+
+
+
+### 1.2 Dave
+
+> [基于Gazebo开发的水下仿真环境](https://field-robotics-lab.github.io/dave.doc/)
+
+#### 1.2.1 安装
+
+该仿真环境基于[UUV-Simulator](https://github.com/uuvsimulator/uuv_simulator) 建立。
+
+Ubuntu22.04 使用Docker安装Dave，[参照此教程进行](https://field-robotics-lab.github.io/dave.doc/contents/installation/Docker-Development-Image/)。安装过程中会由于网络原因导致各种报错，可以用以下方法解决：
+
+```bash
+# 0.自行pull远程的docker镜像到本地
+docker pull ros:noetic-ros-base
+
+# 1. 修改build.bash中创建docker的网络形式，设置network=host
+docker build --network=host --rm -t $image_plus_tag -f "${1}"/Dockerfile "${1}" && \
+docker tag $image_plus_tag $image_name:$distro && \
+
+# 2. 在dockerfile中添加修复依赖缺失
+RUN apt-get install -f --fix-missing
+# Get ROS and Gazebo
+RUN /bin/sh -c 'echo "deb http://packages.ros.org/ros/ubuntu ${RELEASE} main" > /etc/apt/sources.list.d/ros1-latest.list' \
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+RUN apt-get install -f --fix-missing \
+ && /bin/sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable ${RELEASE} main" > /etc/apt/sources.list.d/gazebo-stable.list' \
+ 
+ # 3. 设置run.bash的终端代理
+export http_proxy=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:7890
+```
+
+注意，运行教程的./run.bash dockwater:noetic后会将本地主目录、挂载到镜像，并直接进入了镜像，终端可能没有太大变化，注意区分。
+
++ 直接在Ubuntu20.04主机上安装
+
+参照文档安装教程正常安装即可，安装ROS和Gazebo可以参考小甲鱼的脚本安装。
+
+安装之后，还需要下载一些其它的ROS依赖，汇总如下:
+
+```bash
+sudo apt-get install ros-noetic-effort-controllers
+sudo apt-get install ros-noetic-joy
+sudo apt-get install ros-noetic-kdl-parser-py
+```
+
+#### 1.2.2 功能包
+
+​		Dave基于ROS进行开发，提供八个ROS功能包，主要包括控制接口、gazebo world环境包、传感器模块和主要的水下机器人。
+
+![image-20250430102528164](/media/airporal/8333B1863791CF8A/learn/Notebook/Simulations.assets/image-20250430102528164.png)
+
+其中，在uuv_simulator中包含了原项目的所有文件和功能，可以参考原项目进行开发。
+
++ dave
+
+    example：案例
+
+    extras：无用多波束声纳拓展
+
+    gazebo：无用gazebo的dave插件包
+
+    legacy：无用遗留项目
+
+    models：外观模型原文件
+
+    tools：无用工具
+
+    urdf：各个机器人、执行器、传感器描述文件
+
++ dockwater
+
+    docker下使用时的配置包
+
++ ds_msgs
+
+    ds_*包含了一系列传感器用到的消息接口、Gazebo插件、URDF文件和基本的World
+
++ ds_sim
+    ds_*包含了一系列传感器用到的消息接口、Gazebo插件、URDF文件和基本的World
+
++ eca_a9
+    包含了ECA A9水下机器人的descriptio、control文件
+
++ rexrov2
+    包含了rexrov2的description、control文件。
+
++ uuv_manipulators
+
+    机械臂和夹爪功能包。
+
+    + uuv_manipulators_control
+
+    关节、夹爪控制器
+
+    + uuv_manipulators_description
+
+    机械臂的描述的模板
+
+    + uuv_manipulators_kinematics
+
+    运动学解
+
+    + uuv_manipulators_msgs
+
+    用到的消息接口
+
+    + oberon4
+
+    oberon4的描述及控制脚本
+
+    + oberon7
+
+    oberon7的描述及控制脚本
+
++ uuv_simulator
+
+    + uuv_assistants
+
+    **用于仿真的监控和分析的工具包。**
+
+    + uuv_control
+
+        **推进器、轨迹的相关功能包集合**  
+
+          + uuv_auv_control_allocator
+
+          用于将力和力矩合理分配给给各个推进器
+
+          + uuv_control_cascaded_pid
+
+          一个位置、加速度、速度的PID控制器
+
+          + uuv_control_msgs
+
+          uuv_control使用到的消息接口
+
+          + uuv_control_utils
+
+          
+
+          + uuv_thruster_manager
+
+          
+
+          + uuv_trajectory_control
+
+    + uuv_descriptions
+
+    **提供的各个uuv模型文件、启动脚本等。**
+
+    + uuv_gazebo
+
+    **一些gazebo、rviz的使用demo**
+
+    + uuv_gazebo_plugins
+
+        + uuv_gazebo_plugins
+
+        **模拟流体动力和静水力、推进器推力的功能包**
+
+        + uuv_gazebo_ros_plugins
+
+        将模拟的流体动力、水静力、推进器推力以ROS服务和主题的形式发布
+
+        + uuv_gazebo_ros_plugins_msgs
+
+        使用到的消息接口
+
+    + uuv_gazebo_worlds
+
+    uuv_simulator提供的gazebo World文件
+
+    + uuv_sensor_plugins
+
+        + uuv_sensor_ros_plugins
+
+        包括camer、DVL、Sonar、GPS、IMU等传感器的ROS实现、网格、URDF文件
+
+        + uuv_sensor_ros_plugins_msg
+
+        sensor插件用到的消息接口
+
+    + uuv_teleop
+
+    **将手柄外设信号转化为ROS信号的功能包**
+
+    + uuv_tutorials
+
+    + uuv_world_plugins
+
+        关于gazebo仿真的world设置插件组
+
+        + uuv_world_ros_plugins
+        + uuv_world_ros_plugins_msgs
+
+        消息接口
+
+        + uuv_world_plugins
+
+#### 1.2.3 如何导入自己的机器人？
+
+在此目录下添加自己的机器人的功能包：
+
+```bash
+cd src/dave/urdf/robots
+catkin_create_pkg hroerone_description
+```
+
+在description下新建meshes、urdf、launch文件，分别存放对应文件。
+
+在此目录下新建launch文件，以调用在description中设置的各个launch文件：
+
+```bash
+cd src/dave/examples/dave_robot_launch/launch
+```
+
+最好先参考rexrov2、eca_a9建立一个完整的hroerone功能包，再使用dave进行测试。
+
+### 1.3 UNav-sim
+
+> [基于虚幻引擎5和AirSim开发的水下机器人模拟器](https://github.com/open-airlab/UNav-Sim)
+
+​	UNav-sim基于AirSim项目开发，目前缺少文档，但是可以参考Airsim进行开发。然而，UNav-sim并不成熟，目前仅仅可以使用C++进行开发，底层API不完善，基本不支持使用python的API。
+
+​	要安装UNavSim，建议在Windows上进行安装，因为epic launcher 不支持Ubuntu，而UE5需要依托该平台下载一些场景、模型等。但也可在Ubuntu上编译安装Ue5，并打开Unavsim中的项目。参考仓库[说明安装即可](https://github.com/open-airlab/UNav-Sim)。
+
+---
+
+​	在Windows下使用：
+
+​	首先安装UE5，直接通过epic安装即可。Airsim支持UE4，而UNavsim支持UE5，安装过程大概与[Airsim文档](https://microsoft.github.io/AirSim/build_windows/)一致。
+
+​	安装后，可参考此文档的[工作流进行](https://microsoft.github.io/AirSim/dev_workflow/)，基本思想是，如果要对插件进行更改，首先使用build脚本生成代码，然后需要在block中使用VS进行开发，开发完成后，再运行update_to_git.bat，将更改同步到Unreal/Plugins中。
+
+​	在其它自定义场景中使用时，复制Unreal/Plugins文件夹到目标虚幻项目文件夹中，运行sln打开visual studio调试项目，之后选择DebugGame Editor 并在本地调试即可自动调试并打开ue。
+
+​	安装项目时，编译过程会由于网络问题出现报错，调试时，可能会由于visual studio缺少需要的组件而报错，根据缺少的安装即可。注意，第一次安装ue，在安装完后，要退出epic再重新进入，出现一个提示并确定后才可使用。
+
+---
+
+​	开发Unavsim:
+
+​	可使用C++ 开发，遗憾的是UnavSim并没有完成pythonAPI，无法向AirSIm那样使用PythonAPI控制机器人运动。
+
+---
+
+​	添加自己的机器人？
+
+​	很复杂。
+
++ 建立自己的机器人模型，并在UE中导入
++ 在Unreal/Environments/Blcks中进入UE，并且将模型更改为自己的机器人
++ 要调试机器人和设置一些API，修改AirLib，建立自己的机器人c++ API库
++ [使用RPC包装器建立python API](https://microsoft.github.io/AirSim/adding_new_apis/)
++ 调试后，运行update_to_git重新生成插件
++ 在新的UE工程下使用插件
+
+​	涉及到整体C++、PYTHON端的API开发和调试。
+
+### 1.4 Webots
+
+> 提供编程接口和水下场
+
+场景描述格式：
+
+wbt：场景描述的基本格式
+
+标准项目文件层次模板：
+
+​	根目录下包含以下文件夹
+
+​	controllers：控制器
+
+​	protos：protos文件(单个组件)
+
+​	plugins：插件文件
+
+​	worlds: 存放wbt世界文件
+
+
+
+### 1.5 Stonefish
+
+> 开源水下环境，基于C++开发
+
+
+
+## 2. 浅在可开发的仿真平台
+
+### 2.1 Isaac Sim
+
+> [基于Phyx构建，功能全面，目前没有水下环境，但是提供开发接口，可能可以编写拓展插件来创建水下仿真环境。](https://docs.isaacsim.omniverse.nvidia.com/4.5.0/reference_material/benchmarks.html)
+
+[isaac_underwater](https://github.com/leonlime/isaac_underwater?utm_source=chatgpt.com):这个项目很基础，但是可以基于这个项目进行开发。
+
+![image-20250521110624569](Simulations.assets/image-20250521110624569.png)
+
+
+
+[Ocean_sim](https://github.com/umfieldrobotics/OceanSim)
+
+[MarineGym](https://marine-gym.com/)
+
+[AAM-SEALS](https://aam-seals.umd.edu/)
+
+### 2.2 Genesis
+
+> [拥有光滑粒子流体动力学求解器等非刚体求解器](https://genesis-world.readthedocs.io/zh-cn/latest/user_guide/overview/what_is_genesis.html)
+
+
+
+
+
+### 2.3 MuJoCo
+
+> [可以进行简化的流体仿真，但无法精确的模拟流体动力学](https://mujoco.readthedocs.io/en/stable/computation/fluid.html)
+
+
+
+## 3. 被抛弃的平台
+
+### 3.1 UWsim
+
+> [较旧的平台，提供完整的水下仿真](https://www.irs.uji.es/uwsim/)
+
+暂时抛弃此平台，需要Ubuntu18.04来使用，项目已经长期无人维护。（运行虚拟机即可）
+
+### 3.2 ThreedDWorld
+
+> [闭源方案，官网表示可以设置流体特性](https://www.threedworld.org/)
+
+开发困难，价值不如开源平台。
+
+### 3.3 MARUSimulator
+
+> 基于UE的开源项目，但缺乏项目文档
+
+缺少文档，开发难度极大。

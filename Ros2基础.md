@@ -102,6 +102,10 @@ colcon build –symlink-install
 
 + cpp功能包编译
 
+> 当vscode找不到路径时，不影响编译，但是可能没有路径，需要添加路径。
+
+![image-20250228125421495](assets/image-20250228125421495.png)
+
   修改CmakeLists.txt文件
 
 ```cmake
@@ -584,7 +588,7 @@ ros2 topic pub 话题名 消息类型 数据
 
 ### 2.4 消息接口
 
-
+消息接口因为缺少一些python依[赖，特别是em包时](https://blog.csdn.net/qq_57633442/article/details/137858606)，无法完成编译，需要安装相应的库。此外，消息接口必须以小写字母开头，不符合命名要求也会无法编译。
 
 ### 2.5 参数
 
