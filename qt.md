@@ -248,7 +248,7 @@ C++ 程序运行过程中内存划分为四个区域：
 
 **代码区：**使用二进制储存代码，可以共享调用；
 
-全局区：双引号字符串、全局变量、常量（static修饰的静态变量和const修饰的全局变量）
+**全局区：**双引号字符串、全局变量、常量（static修饰的静态变量和const修饰的全局变量）
 
 **栈区：**编译器自动释放内存，包括函数的参数值、局部变量等。不要用局部变量的地址作为函数返回值，第一次编译器保留下来可以返回，之后就会自动释放。
 
@@ -1047,6 +1047,7 @@ AbstractDrinking::~AbstractDrinking() {
 		
 	}
 	else {
+        // ifs到字符串，一次读一行，ifs到字节，一次读一个
 		char buf[1024] = { 0 };
 		while (ifs>>buf) {
 			cout << buf << endl;
@@ -1069,7 +1070,7 @@ AbstractDrinking::~AbstractDrinking() {
 /*
 首先以二进制的方法打开文件
 编写需要的文件内容，不要使用string,要使用char *,因为底层不是c++
-使用write写入，并强制转换为const cahr*
+使用write写入，并强制转换为const char*
 */
 ```
 
@@ -1277,7 +1278,796 @@ int main() {
 
 ### 18.1 string 
 
++ 构造函数
+
+```c++
+#include <string>
+using namespace std;  // 指定缺省的使名空间。
+string str;       // 创建string对象。
+str = "data";	//赋值
+// 迭代器
+string::iterator begin = str.begin();
+string::iterator end = str.end();
+// 插入
+int len = str.length(); //返回字符串长度
+str.insert(n,"new");
+str.pushback;
+// string 转int
+//atoi（）可以将char * 的字符串转为数字，先使用string的c_str()属性转为char *
+int a = atoi(str.c_str());
+```
+
 ### 18.2 vector
+
+```c++
+#include <vector>
+#include <algorithm>
+using namespace std;
+// 构造函数
+vector<int> name; //实例化一个空的整形数组
+vector<int> name(7); //实例化一个包含7个数的整形数组，每个都默认为0
+vector<int> name(7,2); //实例化一个包含7个数的整形数组，每个都是2
+vector<int> name = {1,2,3,4};// 初始化一个包含1,2,3,4的数组
+// name是数组的头指针
+
+//向数组中添加内容
+name.push_back(4); //将4加到数组末尾
+//索引数组第n个元素
+int val = name[n];
+// 迭代器
+name.begin();
+name.end();
+//获取数组大小
+int size = name.size();
+// 遍历数组
+for (auto it = myVector.begin(); it != myVector.end(); ++it) {
+    std::cout << *it << " ";
+}
+
+//或者（必须以此形式声明int，否则可能报错）
+for (int element : myVector) {
+    std::cout << element << " ";
+}
+
+// 判断是否为空
+name.empty();
+// 获取容量
+name.capacity();
+// 重设容量,大于原来的容量则会用默认值或者指定值填充，小于原来容量则删除
+name.resize(15);
+name.resize(15,0);
+
+//根据地址删除元素
+name.erase(name.begin()+2); // 删除第三个元素,传入迭代器
+name.pop_back();
+// 指定位置插入数据
+name.insert(interator,element);
+
+//清空数组
+name.clear();
+name.erase(iterator1,iterator2);// 删除迭代器之间的元素
+//利用algorithm提供的方法可以找到向量最值下标
+auto max_idx = max_element(name.begin(),name.end())
+// 返回最大值
+auto max = max_element(name.begin(),name.end());
+
+// 交换容器内容,收缩内存
+int main() {
+	vector<int> v1;
+	vector<int> v2;
+    // 为v2预留空间，防止不必要的内存重新分配导致资源消耗
+	v2.reserve(10000);
+	int* p1 = NULL;
+	int* p2 = NULL;
+	int n1 = 0;
+	int n2 = 0;
+	for (int i = 0; i < 10000;i++) {
+		v1.push_back(i);
+		v2.push_back(i);
+		if (p1!=&v1[0]) {
+			p1 = &v1[0];
+			n1++;
+		}
+		if (p2 != &v2[0]) {
+			p2 = &v2[0];
+			n2++;
+		}
+
+	}
+    // v1总共分配了24次内存，v2只分配了一次。
+	cout << n1 << endl;
+	cout << n2 << endl;
+	for (int i = 0; i < 10000;i++) {
+		v1.push_back(i);
+
+	}
+	cout << v1.capacity() << endl;
+	v1.resize(3);
+	cout << v1.capacity() << endl;
+	v2.swap(v1);
+	printVector(v2);
+	cout << v1.capacity() << endl;
+	v1.resize(3);
+    // 通过建立匿名对象拷贝有大量未使用空间的v1中的内容，并压缩空间
+	vector<int>(v1).swap(v1);
+	cout << v1.capacity() << endl;
+	return 0;
+}
+```
+
+### 18.3 deque
+
+几乎和vector一样，但是内部有对数据的维护，不存在容量的概念，可以从前端和后端进行操作元素。
+
+### 18.4 stack
+
+栈是先进后出的数据结构，不可以遍历。
+
+### 18.5 queue
+
+队列是一种先入先出的数据结构，不可以遍历。
+
+### 18.6 list
+
+即链表。链表可以对任意的位置快速插入或者删除元素。相比于vector来说不需要移动其它的元素，在插入或删除过程中可以节省大量时间。
+
+链表的储存地址不是在一块，不能通过迭代器的偏移来遍历，遍历的速度比较慢，占用的空间比较大。
+
+不支持随机访问迭代器的容器，不可以使用标准算法库algorithm的函数。但会提供成员函数的方法。
+
+```c++
+// 构造函数
+	list<int> L1;
+	L1.push_back(1);
+	L1.push_back(2);
+	L1.push_front(3);
+	L1.push_front(4);
+	printList(L1);
+
+	list<int> L2(L1);
+	printList(L2);
+	list<int>L3(++L1.begin(), L1.end());
+
+// 赋值
+L1.assig()
+// 交换
+    L1.swap()
+// 改变大小
+    L1.resize()
+// 插入
+    L1.insert(迭代器，值)
+    // 尾插
+    L1.push_back()
+    // 头插
+    L1.push_front();
+// 删除
+	L1.erase();
+	L1.pop_front();
+	L1.pop_back();
+	L1.remove();
+	L1.clear();
+// 排序,默认降序，可以自行设置排序函数类似下面：
+void funName(int a,int b){
+    
+    
+}
+	L1.sort(funName);
+// 翻转
+	L1.reverse()
+```
+
+### 18.7 set
+
+set集合容器，在插入后会自动排序，不允许插入相同的值。
+
+```c++
+// 插入
+set<int> s1;
+s1.insert(2);
+// 删除
+s1.clear();
+s1.erase();
+// 自定义排序规则（自定义类型时必须有）
+class MyCompare {
+public:
+    bool operator()(const int& a, const int &b) const{
+        return a > b;
+    }
+};
+std::set<int, MyCompare> s1;
+    for (set<int,MyCompare>::iterator it = s1.begin(); it != s1.end(); it++) {
+        std::cout << *it << " ";
+    }
+    std::cout << std::endl;
+```
+
+multiset可以插入重复的数据。
+
+```c++
+multiset<int> s2;
+```
+
+对组pair
+
+```c++
+	pair<string,int>p("Airporal",22);
+	cout << p.first << " " << p.second << endl;
+	pair<string, int>p2 = make_pair("Airporal", 222);
+	cout << p2.first << " " << p2.second << endl;
+```
+
+
+
+### 18.8 map
+
+map容器中每个元素都是对组，第一个值是键key，第二个值是值value。
+
+## 19.仿函数
+
+### 19.1 仿函数用法
+
+仿函数即是对类的括号运算符的重载。
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+class Fun {
+public:
+	void operator()(string str) {
+		cout << "Calling Fun object with parameter: " << str << endl;
+	}
+};
+
+
+int main() {
+	Fun f;
+	f("Hello");
+	return 0;
+}
+```
+
+### 19.2 谓语
+
+返回bool类型的仿函数称为谓语。接收一个参数称为一元谓语，接收两个参数为二元谓语。谓语通常用作某些函数的传入参数（标识符号为Pr）。
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+class Fun {
+public:
+	bool operator()(int a) {
+		//cout << "Calling Fun object with parameter: " << str << endl;
+		return a > 4;
+	}
+};
+
+
+int main() {
+	vector<int> v = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+	vector<int>::iterator it = find_if(v.begin(), v.end(), Fun());
+	if (it != v.end()) {
+		cout << "Found: " << *it << endl;
+	}
+	else {
+		cout << "Not found" << endl;
+	}
+	return 0;
+}
+```
+
+```c++
+// 二元谓语
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+class Fun {
+public:
+	bool operator()(int a,int b) {
+		//cout << "Calling Fun object with parameter: " << str << endl;
+		return a > b;
+	}
+};
+
+class Fun2 {
+public:
+	bool operator()(int a, int b) {
+		//cout << "Calling Fun object with parameter: " << str << endl;
+		return a > b;
+	}
+};
+
+
+int main() {
+	vector<int> v = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+	sort(v.begin(),v.end(),Fun2());
+	for (vector<int>::iterator it = v.begin(); it != v.end();it++) {
+		cout << *it << ' ';
+	}
+	cout << endl;
+
+	return 0;
+}
+```
+
+### 19.3 算术仿函数
+
+c++内置的仿函数，使用模版构建，可直接使用。
+
+```c++
+#include <functional>
+// 取反仿函数
+函数对象：
+negate<T> name;
+cout<<name(30)<<endl;
+-50
+// 加法仿函数
+函数对象
+plus<int> p;
+cout<<p(10,20)<<endl;
+30
+// 减法
+    plus<>
+// 乘法
+    multiplies<>;
+// 除法
+	divides<>;
+// 取模
+	modulus<>;
+
+```
+
+### 19.4 关系仿函数
+
+```c++
+equal_to<> // 等于
+not_equal_to<> // 不等于
+greater<T> // 大于
+greater_equal<T> // 大于等于
+less<> // 小于
+less_equal<> // 小于等于
+```
+
+## 20 常用算法
+
+### 20.1 遍历
+
+for_each
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+void print01(int v) {
+	cout << v << " ";
+}
+class print02 {
+public:
+	void operator()(int v) {
+		cout << v << " ";
+	}
+};
+
+void test01() {
+	vector<int> v;
+	for (int i = 0; i < 10; i++) {
+		v.push_back(i);
+	}
+	cout << "---匿名函数" << endl;
+	for_each(v.begin(), v.end(), [](int val) {cout << val << " "; });
+	cout << "---普通函数" << endl;
+	for_each(v.begin(), v.end(), print01);
+	cout << "---仿函数" << endl;
+	for_each(v.begin(), v.end(), print02());
+
+}
+
+int  main() {
+	test01();
+	return 0;
+}
+```
+
+**transform**
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class Solution {
+public:
+	int operator()(int v) {
+		return v * 2;
+	}
+};
+
+void test01() {
+	vector<int> nums = { 1, 2, 3, 4, 5 };
+	vector<int> res(10);
+	for_each(nums.begin(), nums.end(), [](int v) {cout << v << ' '; });
+	transform(nums.begin(), nums.end(), res.begin(), Solution());
+	cout << endl;
+	for_each(res.begin(), res.end(), [](int v) {cout << v << ' '; });
+
+}
+
+int main() {
+	test01();
+	return 0;
+}
+```
+
+
+
+### 20.2 查找
+
+**find**:查找指定元素，如果自定义数据类型需要重载双等号运算符。
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class Person {
+public:
+	string m_name;
+	int m_age;
+	Person(string name,int age) {
+		this->m_name = name;
+		this->m_age = age;
+	}
+	bool operator==(const Person& p) {
+		if (this->m_name == p.m_name && this->m_age == p.m_age)
+		{
+			return true;
+		}
+		return false;
+	}
+
+};
+
+void test01() {
+	vector<int> v1;
+	for (int i = 0; i < 10; i++) {
+		v1.push_back(i);
+	}
+	//cout << *find(v1.begin(),v1.end(),13) << endl;
+	vector<Person> v2;
+	Person p1("aaa", 10);
+	Person p2("bbb", 20);
+	Person p3("ccc", 30);
+	Person p4("ddd", 40);
+	v2.push_back(p1);
+	v2.push_back(p2);
+	v2.push_back(p3);
+
+	cout << find(v2.begin(), v2.end(), p1)->m_name << endl;
+}
+
+int main() {
+	test01();
+	return 0;
+}
+```
+
+**find_if**：按照指定规则查找第一个满足条件的元素的迭代器
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class Person {
+public:
+	string m_name;
+	int m_age;
+	Person(string name,int age) {
+		this->m_name = name;
+		this->m_age = age;
+	}
+	bool operator==(const Person& p) {
+		if (this->m_name == p.m_name && this->m_age == p.m_age)
+		{
+			return true;
+		}
+		return false;
+	}
+
+};
+class findPerson {
+public:
+	bool operator()(const Person& p) {
+		if (p.m_age == 20) {
+			return true;
+		}
+		return false;
+	}
+};
+
+void test01() {
+	vector<int> v1;
+	for (int i = 0; i < 10; i++) {
+		v1.push_back(i);
+	}
+	//cout << *find(v1.begin(),v1.end(),13) << endl;
+	vector<Person> v2;
+	Person p1("aaa", 10);
+	Person p2("bbb", 20);
+	Person p3("ccc", 30);
+	Person p4("ddd", 40);
+	v2.push_back(p1);
+	v2.push_back(p2);
+	v2.push_back(p3);
+
+	cout << find(v2.begin(), v2.end(), p1)->m_name << endl;
+	vector<Person>::iterator it = find_if(v2.begin(), v2.end(), findPerson());
+	if (it!=v2.end()) {
+		cout << "find it" << it->m_name<< endl;
+	}
+	else {
+		cout << "not find it" << endl;
+
+	}
+}
+
+int main() {
+	test01();
+	return 0;
+}
+```
+
+**adjacent_find**：查找第一个相连的相同元素
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class Person {
+public:
+	string m_name;
+	int m_age;
+	Person(string name,int age) {
+		this->m_name = name;
+		this->m_age = age;
+	}
+	bool operator==(const Person& p) {
+		if (this->m_name == p.m_name && this->m_age == p.m_age)
+		{
+			return true;
+		}
+		return false;
+	}
+
+};
+class findPerson {
+public:
+	bool operator()(const Person& p) {
+		if (p.m_age == 20) {
+			return true;
+		}
+		return false;
+	}
+};
+
+void test01() {
+	vector<Person> v2;
+	Person p1("aaa", 10);
+	Person p2("bbb", 20);
+	Person p3("ccc", 30);
+	Person p4("ddd", 40);
+	v2.push_back(p1);
+	v2.push_back(p2);
+	v2.push_back(Person("bbb", 20));
+	v2.push_back(p3);
+	v2.push_back(Person("ccc",20));
+
+	vector<Person>::iterator ir = adjacent_find(v2.begin(),v2.end());
+	cout << ir->m_name << endl;
+}
+
+int main() {
+	test01();
+	return 0;
+}
+```
+
+**binary_search**：对有序序列进行高效的二分查找。
+
+**count**：统计某个数据出现的次数
+
+```c++
+cout << count(v2.begin(), v2.end(), p2) << endl;
+```
+
+**count_if**：按照谓语查找满足的值的个数。
+
+### 20.3 排序
+
+**sort**：默认从小到大排序，可以设置谓语调整排序方法
+
+```c++
+class fun{
+    public:
+    bool operator()(int a, int b){
+        return a>b;
+    }
+    
+};
+
+vector<int> v;
+v.push_back(3);
+v.push_back(23);
+v.push_back(13);
+v.push_back(33);
+sort(v.begin(),v.end());
+for_each(v.begin(),v.end(),[](int v){cout<<v<<' ';1});
+// 3 13 23 33
+sort(v.begin(),v.end(),fun());
+for_each(v.begin(),v.end(),[](int v){cout<<v<<' ';1});
+// 33 23 13 3
+```
+
+**random_shuffle**：洗牌
+
+```c++
+	random_shuffle(v2.begin(), v2.end());
+	for_each(v2.begin(), v2.end(), [](Person p) {cout << p.m_name << " " << p.m_age << endl; });
+```
+
+**merge**：将两个有序序列合并成一个新的有序序列
+
+**reverse**：将容器翻转
+
+### 20.4 拷贝与替换
+
+**copy：** 利用copy算法将一个容器的部分数据拷贝到另外一个容器，先要给该容器开辟空间。
+
+**replace**：将某个值替换为另外的值
+
+**replace**：按照谓语将值替换为指定的值。
+
+**swap**：交换两个容器。
+
+```c++
+#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+class MyFunctor {
+public:
+	bool operator()(int a) {
+		return a > 3;
+	}
+};
+
+int main() {
+	vector<int> v;
+	v.push_back(1);
+	v.push_back(2);
+	v.push_back(3);
+	v.push_back(4);
+	v.push_back(5);
+	v.push_back(3);
+
+	vector<int> v2;
+	v2.resize(v.size());
+	copy(v.begin(), v.end(), v2.begin());
+	for_each(v2.begin(), v2.end(), [](int i) {cout << i << " "; });
+	cout << endl;	
+	replace(v2.begin(), v2.end(), 3, 300);
+	for_each(v2.begin(), v2.end(), [](int i) {cout << i << " "; });
+	cout << endl;
+	replace_if(v2.begin(), v2.end(),MyFunctor(), 3);
+	for_each(v2.begin(), v2.end(), [](int i) {cout << i << " "; });
+	cout << endl;
+	swap(v,v2);
+	for_each(v2.begin(), v2.end(), [](int i) {cout << i << " "; });
+	system("pause");
+	return 0;
+}
+```
+
+### 20.5 其它
+
+ **accumulate**：累加函数。
+
+**fill**：将容器指定区间中的值填充为指定的值。
+
+**set_intersection**：当两个原容器是有序序列时，可以求出两个容器中交集部分并复制给新的目标容器，返回目标容器中交集数据的最后一位迭代器。需要先给目标容器开拓空间。
+
+**set_union**：获取有序序列的并集。
+
+**set_differerce**：取前一个容器与后一个容器的差集合，即前一个容器中有后一个容器中没有的元素的集合。
+
+```c++
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <numeric>
+using namespace std;
+
+class MyFunctor {
+public:
+	bool operator()(int a) {
+		return a > 3;
+	}
+};
+
+int main() {
+	vector<int> v;
+	v.push_back(1);
+	v.push_back(2);
+	v.push_back(3);
+	v.push_back(4);
+	v.push_back(5);
+	v.push_back(9);
+	int n = accumulate(v.begin(), v.end(), 1);
+	cout << n << endl;
+	v.resize(10);
+	cout << v.capacity() << endl;
+	for_each(v.begin(), v.end(), [](int a) {cout << a << " "; });
+	cout << endl;
+	fill(v.begin()+6, v.end(), 10);
+	for_each(v.begin(), v.end(), [](int a) {cout << a << " "; });
+	cout << endl;
+	
+	vector<int> v2 = {1,2,4,6,8};
+	vector<int> vTarget;
+	vTarget.resize(min(v2.size(),v.size()));
+	vector<int>::iterator endIt =  set_intersection(v.begin(), v.end(), v2.begin(), v2.end(), vTarget.begin());
+	for_each(vTarget.begin(), endIt, [](int a) {cout << a << " "; });
+	cout << endl;
+
+	vector<int> v3 = { 1,2,4,6,8 };
+	vector<int> vTarget2;
+	vTarget2.resize(v3.size()+v.size());
+	vector<int>::iterator endIt2 = set_union(v.begin(), v.end(), v3.begin(), v3.end(), vTarget2.begin());
+	for_each(vTarget2.begin(), endIt2, [](int a) {cout << a << " "; });
+	cout << endl;
+
+	vector<int> v4 = { 1,2,4,6,8 };	
+	vector<int> vTarget3;
+	vTarget3.resize(max(v.size(),v4.size()));
+	vector<int>::iterator endIt3 = set_difference(v.begin(), v.end(), v4.begin(), v4.end(), vTarget3.begin());
+	for_each(vTarget3.begin(), endIt3, [](int a) {cout << a << " "; });
+	cout << endl;
+
+	vector<int> vTarget4;
+	vTarget4.resize(max(v.size(), v4.size()));
+	vector<int>::iterator endIt4 = set_difference(v4.begin(), v4.end(), v.begin(), v.end(), vTarget4.begin());
+	for_each(vTarget4.begin(), endIt4, [](int a) {cout << a << " "; });
+
+	system("pause");
+	return 0;
+}
+```
 
 
 
@@ -1588,9 +2378,11 @@ connect(button, &QPushButton::clicked, this, [=]() {
 connect(button, &QPushButton::clicked, this, [=]()->int {
 		emit teacher->hungry("fish");
 		});
+// mutable 关键字：如果要修改匿名函数接受的参数的值就需要使用mutable关键字
+connect(button,&QPushButton::ckicked,this,[m]()->int mutable{m=10;emit teacher->hungry("fish")});
 ```
 
-
+connect中，槽函数对应的组件可以忽略不写，即第三个参数可以忽略
 
 ## 5. QMainWindow
 
@@ -1774,6 +2566,355 @@ QtUiDesigner::~QtUiDesigner()
     ui.actionnew->setIcon(QIcon(":/source/R-C.png"));
 
 ```
+
+
+
+## 7. 自定义控件
+
+可以在vs中新建一个设计师ui文件，设计好自己的类然后作为一个新的组件使用。
+
++ 点击新建项
+
+![image-20250103221612715](C:\Users\Administrator.DESKTOP-K7JDKF5\AppData\Roaming\Typora\typora-user-images\image-20250103221612715.png)
+
++ 新建一个Widgets class 并指定名称
+
+![image-20250103221702760](C:\Users\Administrator.DESKTOP-K7JDKF5\AppData\Roaming\Typora\typora-user-images\image-20250103221702760.png)
+
++ 修改名称，并指定为Widget项目
+
+![image-20250103221744501](C:\Users\Administrator.DESKTOP-K7JDKF5\AppData\Roaming\Typora\typora-user-images\image-20250103221744501.png)
+
++ 在新建的ui文件中完成设计并保存
+
+![image-20250103222033177](https://cdn.jsdelivr.net/gh/Airporal/Pictures/img/202501032220359.png)
+
++ 在主窗口中新建一个Widget，并设置提升为该新建的自定义ui，最后保持即可
+
+![image-20250103222218269](https://cdn.jsdelivr.net/gh/Airporal/Pictures/img/202501032222463.png)
+
+## 8. 鼠标事件
+
+​	鼠标在与组件交互过程中会自动产生一些信号，在QWdiget中已经声明好了，当需要使用这些鼠标事件的时候，需要重写这些虚函数。
+
++ 字符串格式化输出
+
+```c++
+QString str = QString("Mouse x = %1    Mouse y = %1").arg(event->position().x()).arg(event->position().y());
+qDebug() << str;
+```
+
++ void enterEvent(QEnterEvent* event)
+
+当鼠标移动入控件时触发该事件，使用event可以捕获鼠标状态。
+
++ void mousePressEvent(QMouseEvent* event)
+
+当鼠标点击时可以触发该事件，可以使用event指针查看点击的键和鼠标指针状态。
+
++ void mouseMoveEvent(QMouseEvent* event)
+
+当按下鼠标键并且移动时触发该事件
+
++ setMouseTracking(true)
+
+设置为true时，鼠标状态每次变化会自动按下键触发相应事件。
+
+```c++
+// 一般在构造函数中调用setMouseTracking(true)
+myLabel::myLabel(QWidget *parent)
+	: QLabel(parent)
+{
+	setMouseTracking(true);
+}
+```
+
+以上四种典型类型的鼠标事件还包括其它相似的事件可以使用。可在QMouseEvent中使用。
+
+## 9. 定时器事件
+
+​	定时器事件可以在指定的时间后触发事件，可以通过两种方式实现定时器事件。
+
++ 方法1：重写定时器触发事件，并通过设置多个不同的timerId实现多个不同的定时器
+
+首先启动定时器，并指定时间：
+
+```cpp
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+{
+    ui.setupUi(this);
+	// 启动定时器，每隔1000ms触发一次
+	this->id1 = startTimer(1000);
+	this->id2 = startTimer(2000);
+
+}
+```
+
+然后编写定时器事件处理的虚函数
+
+```cpp
+void MainWindow::timerEvent(QTimerEvent* event) {
+    static int num = 1;
+    static int num2 = 1;
+    if (event->timerId() == this->id1) {
+        ui.label_2->setText(QString::number(num++));
+    }
+    else { ui.label_3->setText(QString::number(num2++)); }
+
+}
+
+```
+
++ 方法2：堆区新建一个定时器事件，通过调动启动与结束函数并指定信号与槽来实现需要的事件与处理机制。
+
+```cpp
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+{
+    ui.setupUi(this);
+	// 启动定时器，每隔1000ms触发一次
+	this->id1 = startTimer(1000);
+	this->id2 = startTimer(2000);
+
+    QTimer* timer = new QTimer(this);
+    timer->start(500);
+    connect(timer, &QTimer::timeout, [=]() {
+        static int num3 = 1;
+        ui.label_4->setText(QString::number(num3++));        
+        });
+
+    connect(ui.stopButton, &QPushButton::clicked, [=]() {
+        timer->stop();
+        });
+    connect(ui.startButton, &QPushButton::clicked, [=]() {
+        timer->start(500);
+        });
+}
+```
+
+## 10. 事件分发器
+
+​	系统补足到定义好的各类型事件后，需要事件分发器进行事件的管理，事件分发器接受一个QEvent类型的事件指针，返回bool类型表示是否需要处理该事件。
+
+```cpp
+bool event(QEvent *e)
+```
+
+​	如果返回true表示用户处理了该事件，不再自动分发，用户定义的其它事件处理函数将无法捕捉该事件，返回false表示自动分发。
+
+```c++
+bool myLabel::event(QEvent* e) {
+	// 如果是鼠标按下事件，就拦截
+	if (e->type() == QEvent::MouseButtonPress) {
+		// 强制类型转换,否则无法调用QMouseEvent的方法
+		QMouseEvent* event = static_cast<QMouseEvent*>(e);
+		QString str2 = QString("Mouse x = %1    Mouse y = %1").arg(event->globalPosition().x()).arg(event->globalPosition().y());
+		qDebug() << str2;
+		// 返回true表示用户已经拦截处理，不再传递到鼠标按下事件的处理函数
+		return true;
+	}
+	// 其它事件交给父类处理（即默认处理）
+	return	QLabel::event(e);
+}
+```
+
+该函数也是虚函数，可查看手册以拦截所有事件，但是一般不建议拦截。
+
+## 11. 事件过滤器
+
+​	在程序将时间分到时间分发器前进行的一层过滤，与事件分发器类似，但是需要指定控件。
+
+```cpp
+bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
+    if (watched = ui.label_2) {
+        if (event->type() == QEvent::MouseButtonPress) {
+            // 强制类型转换,否则无法调用QMouseEvent的方法
+            QMouseEvent* event2 = static_cast<QMouseEvent*>(event);
+            QString str2 = QString("FilterMouse x = %1    Mouse y = %1").arg(event2->globalPosition().x()).arg(event2->globalPosition().y());
+            qDebug() << str2;
+            // 返回true表示用户已经拦截处理，不再传递到鼠标按下事件的处理函数
+            return true;
+        }
+    }
+    // 其它事件交给父类处理（即默认处理）
+	return	QWidget::eventFilter(watched, event);
+}
+```
+
+​	事件过滤器可以拦截事件分发到子组件的事件分发器上，需要指定组件与事件类型。返回true表示用户已拦截处理，返回false表示不拦截，未处理的事件可以调用父类的事件过滤器来进行默认处理。
+
+## 12. 绘图事件
+
+Qt默认设置了绘图事件，默认为空实现，如果需要设置绘图可以重载该实现。
+
+```c++
+// 类内重载
+void paint::paintEvent(QPaintEvent* event) {
+    // 指定绘图到的组件
+	QPainter painter(this);
+    // 可以设置笔，笔可以修改颜色、粗细等
+	QPen pen(Qt::red, 3);
+	QPen pen2(Qt::yellow, 3);
+    // 可以设置刷子，刷子可以填充图形
+	QBrush brush(Qt::green);
+	pen.setStyle(Qt::DashLine);
+    // 绘图使用painter，可以绘制各类型图案，设置Pen后可以使用设置的颜色
+	painter.setPen(pen);
+	
+	painter.drawLine(0, 0, 100, 100);
+	painter.drawEllipse(100, 100, 100, 100);
+	painter.setPen(pen2);
+    // 设置刷子后可使用指定的内容填充
+	painter.setBrush(brush);
+
+	painter.drawRect(200, 200, 100, 100);
+	painter.drawText(QRect(200,200,100,100),"Hello World");
+}
+```
+
+绘图的Pen\Painter\Brush有许多其它的属性可以设置，可以在手册中查看。
+
+QPainter还可以进行一些例如抗锯齿、移动画笔位置等操作：
+
+```c++
+	QPainter painter(this);
+	painter.drawEllipse(QPoint(100, 100), 100, 100);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.drawEllipse(QPoint(300, 100), 100, 100);
+	painter.translate(400, 100);
+	painter.save();
+	painter.drawRect(QRect(0, 0, 100, 100));
+	painter.translate(100, 100);
+	painter.restore();
+	painter.drawRect(QRect(0, 0, 100, 100));
+```
+
+与其它组件结合时，可以调整图的位置重新设置图的属性。
+
+```c++
+// 使用connect连接组件的信号，并在槽函数中设置修改一些绘图的属性，使用update更新
+connect(ui.horizontalSlider, &QSlider::valueChanged, [=]() {
+		this->place = this->getPlace(ui.horizontalSlider->value());
+    	// 更新绘图
+		update();
+		});
+```
+
+其它绘图设备类型：
+
+QPixmap 专门为图像在屏幕上的显示做了优化
+
+QBitmap是QPixmap的子类，黑白图片
+
+QImage专门为图片的像素级访问做了优化
+
+QPicture可以记录和重现QPainter的各类命令
+
+```c++
+	QPixmap pixmap(300, 300);
+	pixmap.fill(Qt::white);
+	QPainter painter(&pixmap);
+	painter.drawEllipse(150, 150, 100, 100);
+	pixmap.save("F:\learn\QT\QtWidgetsApplication3\source\pix.png");
+```
+
+无论是什么设备（QT组件、QPixmap等），都需要用一个设置为该设备的QPainter进行绘图。
+
+使用Picture时，可以将之间的绘图操作记录为一个任意后缀名的文件，之后加载该文件可以重新自动复现上次报错的绘图记录。
+
+```c++
+	// 绘图并保存
+	QPicture picture;
+	QPainter painter(&picture);
+	painter.setPen(Qt::red);
+	painter.setBrush(Qt::blue);
+	painter.drawRect(0, 0, 100, 100);
+	painter.end();
+	picture.save("F:\learn\QT\QtWidgetsApplication3\source\pic.zt");
+```
+
+```c++
+// 加载并绘制
+	QPainter painter(this);
+
+	painter.drawPixmap(this->place, 0, QBitmap(":/source/image-20241223135839705.png"));
+	QPicture picture;
+	picture.load("F:\learn\QT\QtWidgetsApplication3\source\pic.zt");
+	painter.drawPicture(0, 0, picture);
+```
+
+## 13. 文件交互
+
+使用QFile进行文件的读写操作，通过QIODevice设置打开文件的方式，可以选择一次性全部读取，也可以按照行读取。
+
+默认编码格式为UTF-8，可以使用QTextCode修改格式。
+
+```c++
+	connect(ui.pushButton, &QPushButton::clicked, [=]() {
+		QString filename = QFileDialog::getOpenFileName(this, "Open File", "F:\\");
+		ui.lineEdit->setText(filename);
+		//QTextCodec* codec = QTextCodec::codecForName("UTF-8");
+		QFile file(filename);
+		file.open(QIODevice::ReadOnly);
+		// 一次性读取文件内容
+		//QByteArray array =  file.readAll();
+		//ui.textEdit->setText(array);
+		// 按行读取文件内容
+	/*	QByteArray array;
+		while (!file.atEnd()) {
+			array += file.readLine() + "\n";
+		}*/
+		// 将读取到的内容设置到文本编辑器中
+		ui.textEdit->setText(file.readAll());
+		// 关闭文件
+		file.close();
+		// 进行写文件
+		file.open(QIODevice::Append);
+		// 追加写入
+		file.write("AIRPORAL");
+		file.close();
+		}
+```
+
+获取文件信息：QFileInfo
+
+```c++
+QFileInfo info(filename);
+qDebug() << info.fileName() << info.size() << info.suffix();
+qDebug() << info.birthTime().toString("yyyy/MM/dd hh:mm:ss");
+
+```
+
+# 三：QT项目
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

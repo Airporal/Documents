@@ -73,6 +73,121 @@
 | snownlp模块                        | python的中文自然语言处理库                                   |
 |                                    |                                                              |
 
+---
+
+装饰器
+
++ 函数装饰器：用于给函数添加新的逻辑，拓展函数的功能而不修改函数的源码。
+
+```python
+def my_decorator(func):
+    def wrapper(*args, **kwargs):
+        print("函数执行前")
+        result = func(*args, **kwargs)
+        print("函数执行后")
+        return result
+    return wrapper
+
+@my_decorator
+def say_hello():
+    print("Hello!")
+
+say_hello()
+
+```
+
+输出：
+
+```
+函数执行前
+Hello!
+函数执行后
+
+```
+
+当需要传递装饰器参数时：
+
+```python
+def repeat(n):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for _ in range(n):
+                func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@repeat(3)
+def greet():
+    print("Hi")
+
+greet()
+
+```
+
++ 类装饰器
+
+重写类的__call__方法可以实现类装饰器：
+
+```python
+class CallCounter:
+    def __init__(self, func):
+        self.func = func
+        self.count = 0
+
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        print(f"{self.func.__name__} 被调用了 {self.count} 次")
+        return self.func(*args, **kwargs)
+
+@CallCounter
+def say_hello():
+    print("Hello!")
+
+say_hello()
+say_hello()
+
+```
+
+输出：
+
+```
+调用前
+Hello, Alice!
+调用后
+
+```
+
+类装饰器可以使用类的元素。
+
++ 装饰器作用于类
+
+装饰器作用于类可以给类添加新的方法，如
+
+```PYTHON
+def add_method(cls):
+    def new_method(self):
+        print(f"{self.__class__.__name__} 的新方法被调用了")
+    cls.new_method = new_method
+    return cls
+
+@add_method
+class MyClass:
+    def __init__(self):
+        print("原始构造函数")
+
+obj = MyClass()
+obj.new_method()
+
+```
+
+输出：
+
+```python
+原始构造函数
+MyClass 的新方法被调用了
+
+```
+
 
 
 ## 2.网络爬虫
@@ -83,5 +198,7 @@
 
 > 使用numpy、scipy对数据进行计算,使用matplotlib、seaborn对数据进行可视化处理。
 
-## 4.pytorch
+## 
+
+
 

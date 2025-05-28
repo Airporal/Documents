@@ -26,7 +26,7 @@ rosdep安装：由于网络环境的问题无法安装成功。
 whereis rosdep
 ```
 
-打开该文件：
+🥹🫣打开该文件：​
 
 ```bash
 sudo gedit /usr/bin/rosdep
@@ -365,7 +365,7 @@ from opencv_test.msg import coordinateData
 coor = coordinateData()
 ```
 
-​	cpp中使用时，需要先配置vscode，然后导入节点包。
+​	**cpp中使用时，需要先配置vscode，然后导入节点包。**
 
 ​	vscode环境设置：
 
@@ -373,6 +373,28 @@ coor = coordinateData()
 
 + 在includepath项中，添加path2devel/include/**
 
+  ```json
+  {
+    "configurations": [
+      {
+        "name": "linux-gcc-x64",
+        "includePath": [
+          "${workspaceFolder}/**",
+          "/opt/ros/humble/include/**",
+          "/opt/ros/humble/**",
+          "/usr/include/**"
+        ],
+        "defines": [],
+        "compilerPath": "/usr/bin/gcc",
+        "cStandard": "${default}",
+        "cppStandard": "${default}",
+        "intelliSenseMode": "linux-gcc-x64"
+      }
+    ],
+    "version": 4
+  }
+  ```
+  
   导入消息包：
 
 ```cpp
@@ -1475,6 +1497,99 @@ int main(int argc, char *argv[])
     return 0;
 }
 ```
+
+## 3.2 rivz
+
+
+
+## 3.3 gazebo
+
+> gazebo是一个独立于ros的仿真软件，提供与ros交互的功能包，使用时，通过launch文件打开一些gazebo的节点，然后设置自己的仿真模型即可。
+
++ spawm_model
+
+向gazebo中载入urdf模型。
+
+```xml
+  <node
+    name="spawn_model"
+    pkg="gazebo_ros"
+    type="spawn_model"
+    args="-file $(find hroerone)/urdf/hroerone.urdf -urdf -model hroerone"
+    output="screen" />
+```
+
+使用以下方法查看节点使用的参数：
+
+```bash
+rosrun gazebo_ros spawn_model -h
+```
+
+
+
++ 颜色设置
+
+gazebo不直接使用rivz中显示的颜色标签，而需要使用gazebo的标签在urdf文件中重新设置颜色。
+
+```xml
+<gazebo reference="link节点名称">
+	<material>Gazebo/Blue</material>
+</gazebo>
+```
+
+
+
+
+
+### 3.4 Ros_Control
+
+> ros_control是一组包含了控制器接口、控制器管理器、传输和硬件接口的软件包。用于控制机器人在仿真环境或真实环境中的运动
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
