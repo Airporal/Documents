@@ -36,6 +36,10 @@
 
 ```
 aria2c -x 16 -s 16 -d /home/airporal/.local/share/holoocean/1.0.0/worlds/Ocean https://robots.et.byu.edu/holo/Ocean/v1.0.0/Linux.zip
+
+aria2c -x 16 -s 16 -d /home/airporal/.local/share/holoocean/2.0.0/worlds/Ocean https://robots.et.byu.edu/holo/Ocean/v2.0.0/Linux.zip
+
+ to
 ```
 
 :two:修改holoocean包对应的下载函数，将url改为本地安装：
