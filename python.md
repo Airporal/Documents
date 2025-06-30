@@ -188,6 +188,56 @@ MyClass 的新方法被调用了
 
 ```
 
+---
+
+@cache装饰器
+
+缓存一个函数的返回值，在以相同的参数重复调用时，该函数直接可以输出返回值。
+
+```python
+# 查看被cache装饰的函数fun_name的缓存信息，包括被调用的次数和重新运行的次数
+fun_name.cache_info() 
+# 清除缓存
+fun_name.cache_clear() 
+```
+
+@retry
+
+自动重新调用某个函数n次
+
+@get time 
+
+测试某个函数运行速度
+
+@atexit.register
+
+注册终止处理，当程序结束或报错后运行该装饰器装饰的函数。
+
+```python
+import atexit
+@atexit.register
+def fun():
+    pass
+```
+
+
+
+---
+
+多个bool值做判断时，可以使用all或any函数提高可读性：
+
+```python
+requirements = [is_connected,has_electricity,has_paid_bills]
+if all(requirements):#需要都满足
+	pass
+if any(requirements):#至少一个满足
+	pass
+```
+
+---
+
+
+
 
 
 ## 2.网络爬虫
